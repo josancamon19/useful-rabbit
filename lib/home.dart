@@ -1,9 +1,12 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
-import 'package:record/record.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,6 +16,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // final FlutterSoundPlayer _player = FlutterSoundPlayer();
+
   late RealtimeClient client;
   Map<String, dynamic> memoryKv = {};
   Map<String, dynamic> marker = {};
@@ -20,25 +25,67 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> realtimeEvents = [];
   List<dynamic> items = [];
 
-  final record = AudioRecorder();
+  // final record = AudioRecorder();
+  late StreamController<Uint8List> _controller;
+  final record = FlutterSoundRecorder();
+  Queue<Uint8List> audioQueue = Queue<Uint8List>();
+
+// Add audio bytes to the queue in order of arrival
+  void enqueueAudioBytes(Uint8List pcmBytes) {
+    audioQueue.add(pcmBytes);
+    if (audioQueue.length == 1) {
+      playNextAudioChunk();
+    }
+  }
+
+  void playNextAudioChunk() async {
+    if (audioQueue.isNotEmpty) {
+      Uint8List nextChunk = audioQueue.removeFirst();
+
+      // Here you will play the chunk using flutter_sound or audioplayers
+      // Play the audio (this part is handled with a plugin or custom code for PCM)
+
+      // Once playback finishes, play the next chunk if available
+      await playAudioChunk(nextChunk);
+      if (audioQueue.isNotEmpty) {
+        playNextAudioChunk();
+      }
+    }
+  }
+
+  Future<void> playAudioChunk(Uint8List pcmBytes) async {
+    // if (!_player.isOpen()) return;
+    // await _player.startPlayer(
+    //   fromDataBuffer: pcmBytes,
+    //   codec: Codec.pcm16,
+    //   numChannels: 1,
+    //   sampleRate: 24000,
+    // );
+  }
+
+  // _initiatePlayer() async {
+  //   await _player.openPlayer();
+  //   await _player.setVolume(1.0);
+  //   await _player.setSubscriptionDuration(
+  //     const Duration(milliseconds: 10),
+  //   );
+  // }
 
   _initRecording() async {
-    // Check and request permission if needed
-    if (await record.hasPermission()) {
-      final stream = await record.startStream(const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: 24000,
-        numChannels: 1,
-      ));
-      stream.listen((data) {
-        client.appendInputAudio(data);
-      });
-    }
-
-    // Stop recording...
-    //     final path = await record.stop();
-    // ... or cancel it (and implicitly remove file/blob).
-    //     await record.cancel();
+    // TODO: Check and request permission
+    _controller = StreamController<Uint8List>();
+    await record.openRecorder();
+    await record.startRecorder(
+      toStream: _controller.sink,
+      codec: Codec.pcm16,
+      numChannels: 1,
+      bitRate: 16000,
+      bufferSize: 8192,
+      sampleRate: 24000,
+    );
+    _controller.stream.listen((buffer) {
+      client.appendInputAudio(buffer);
+    });
   }
 
   _initClient() async {
@@ -179,11 +226,15 @@ class _HomePageState extends State<HomePage> {
       final conversationItems = client.conversation.getItems();
       if (delta != null && delta['audio'] != null) {
         // Handle audio data if needed
+        // print('Audio:');
+        // print(delta['audio']);
+        enqueueAudioBytes(delta['audio']);
+        // don't you need to add a queue? would they play one above the other or get scheduled automatically?
       }
       if (item['status'] == 'completed' &&
           item['formatted']['audio'] != null &&
           item['formatted']['audio'].length > 0) {
-        // Decode and handle audio file if needed
+        print(item['content'][0]);
       }
       setState(() {
         items = conversationItems;
@@ -201,6 +252,7 @@ class _HomePageState extends State<HomePage> {
       {'type': 'input_text', 'text': 'Hello!'}
     ]);
     _initRecording();
+    // _initiatePlayer();
   }
 
   @override
@@ -212,7 +264,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     client.reset();
-    record.dispose();
     super.dispose();
   }
 
