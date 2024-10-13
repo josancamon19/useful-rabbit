@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:logger/logger.dart' show Level;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
@@ -42,6 +43,9 @@ class _HomePageState extends State<HomePage> {
     _player = FlutterSoundPlayer(logLevel: Level.off);
     await _player.openPlayer();
     await _player.setVolume(1.0);
+    // TODO: set env var
+    // TODO: implement push to talk
+    // TODO: implement multion
   }
 
   _initRecording() async {
@@ -78,7 +82,7 @@ class _HomePageState extends State<HomePage> {
         if (results.isNotEmpty) {
           // debugPrint('discovered result');
           ScanResult r = results.last; //r is last device
-          debugPrint('${r.device.remoteId.str}: "${r.advertisementData.advName}" found!');
+          // debugPrint('${r.device.remoteId.str}: "${r.advertisementData.advName}" found!');
 
           if (r.device.remoteId.str == 'DF:D5:D9:DF:2D:58') {
             // bleDevice = r.device;
@@ -110,10 +114,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   _initClient() async {
-    client = RealtimeClient(
-      apiKey:
-          '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',
-    );
+    client = RealtimeClient(apiKey: dotenv.env['OPENAI_API_KEY']);
 
     client.updateSession(
       instructions: 'You are a productive assistant, you speak very little, and answers short every time.',
@@ -157,12 +158,12 @@ class _HomePageState extends State<HomePage> {
           item['formatted']['audio'] != null &&
           item['formatted']['audio'].length > 0) {
         Uint8List audio = item['formatted']['audio'];
-        await _player.startPlayer(
-          fromDataBuffer: audio,
-          codec: Codec.pcm16,
-          numChannels: 1,
-          sampleRate: 24000,
-        );
+        // await _player.startPlayer(
+        //   fromDataBuffer: audio,
+        //   codec: Codec.pcm16,
+        //   numChannels: 1,
+        //   sampleRate: 24000,
+        // );
         setState(() {
           items.add(item);
         });

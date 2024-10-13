@@ -39,6 +39,7 @@ dependencies:
   record: ^5.1.2
   flutter_sound: ^9.16.3
   flutter_blue_plus: ^1.33.4
+  flutter_dotenv: ^5.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -62,7 +63,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - .env
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
