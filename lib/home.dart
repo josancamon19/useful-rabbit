@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:http/http.dart' as http;
+import 'package:logger/logger.dart' show Level, Logger;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,8 +17,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // final FlutterSoundPlayer _player = FlutterSoundPlayer();
-
   late RealtimeClient client;
   Map<String, dynamic> memoryKv = {};
   Map<String, dynamic> marker = {};
@@ -25,50 +24,50 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> realtimeEvents = [];
   List<dynamic> items = [];
 
-  // final record = AudioRecorder();
   late StreamController<Uint8List> _controller;
-  final record = FlutterSoundRecorder();
+
+  final record = FlutterSoundRecorder(logLevel: Level.off);
   Queue<Uint8List> audioQueue = Queue<Uint8List>();
 
+  // final FlutterSoundPlayer _player = FlutterSoundPlayer(logLevel: Level.off);
 // Add audio bytes to the queue in order of arrival
-  void enqueueAudioBytes(Uint8List pcmBytes) {
-    audioQueue.add(pcmBytes);
-    if (audioQueue.length == 1) {
-      playNextAudioChunk();
-    }
-  }
+//   void enqueueAudioBytes(Uint8List pcmBytes) async{
+//     await _player.startPlayer(
+//       fromDataBuffer: pcmBytes,
+//       codec: Codec.pcm16,
+//       numChannels: 1,
+//       sampleRate: 24000,
+//     );
+//     // audioQueue.add(pcmBytes);
+//     // if (audioQueue.length == 1) {
+//     //   playNextAudioChunk();
+//     // }
+//   }
 
-  void playNextAudioChunk() async {
-    if (audioQueue.isNotEmpty) {
-      Uint8List nextChunk = audioQueue.removeFirst();
-
-      // Here you will play the chunk using flutter_sound or audioplayers
-      // Play the audio (this part is handled with a plugin or custom code for PCM)
-
-      // Once playback finishes, play the next chunk if available
-      await playAudioChunk(nextChunk);
-      if (audioQueue.isNotEmpty) {
-        playNextAudioChunk();
-      }
-    }
-  }
-
-  Future<void> playAudioChunk(Uint8List pcmBytes) async {
-    // if (!_player.isOpen()) return;
-    // await _player.startPlayer(
-    //   fromDataBuffer: pcmBytes,
-    //   codec: Codec.pcm16,
-    //   numChannels: 1,
-    //   sampleRate: 24000,
-    // );
-  }
+  // void playNextAudioChunk() async {
+  //   if (audioQueue.isNotEmpty) {
+  //     Uint8List nextChunk = audioQueue.removeFirst();
+  //     await playAudioChunk(nextChunk);
+  //     if (audioQueue.isNotEmpty) {
+  //       playNextAudioChunk();
+  //     }
+  //   }
+  // }
+  //
+  // Future<void> playAudioChunk(Uint8List pcmBytes) async {
+  //   if (!_player.isOpen()) return;
+  //   print('Playing audio chunk ${pcmBytes}');
+  //   await _player.startPlayer(
+  //     fromDataBuffer: pcmBytes,
+  //     codec: Codec.pcm16,
+  //     numChannels: 1,
+  //     sampleRate: 24000,
+  //   );
+  // }
 
   // _initiatePlayer() async {
   //   await _player.openPlayer();
   //   await _player.setVolume(1.0);
-  //   await _player.setSubscriptionDuration(
-  //     const Duration(milliseconds: 10),
-  //   );
   // }
 
   _initRecording() async {
@@ -83,21 +82,36 @@ class _HomePageState extends State<HomePage> {
       bufferSize: 8192,
       sampleRate: 24000,
     );
+    List<int> queue = [];
     _controller.stream.listen((buffer) {
+      // send queue only when it reaches 1 second of audio
       client.appendInputAudio(buffer);
+      // queue.addAll(buffer);
+      // if (queue.length >= 24000) {
+      //   print('Sending audio chunk ${queue.length} bytes');
+      //   queue.clear();
+      // }
+      // if (client.sessionCreated) {
+      //   client.appendInputAudio(buffer);
+      // }
     });
   }
 
   _initClient() async {
     client = RealtimeClient(
-      apiKey:
-          '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', // Replace with your actual API key
+      apiKey: '',
     );
 
     // Update session with instructions and transcription model
     client.updateSession(
       instructions: 'You are a great, upbeat friend.',
       inputAudioTranscription: {'model': 'whisper-1'},
+      turnDetection: {
+        "type": "server_vad",
+        "threshold": 0.5,
+        "prefix_padding_ms": 300,
+        "silence_duration_ms": 200,
+      },
     );
 
     // Add the 'set_memory' tool
@@ -198,6 +212,12 @@ class _HomePageState extends State<HomePage> {
     // Set up event handling for 'realtime.event'
     client.on('realtime.event', (realtimeEvent) {
       if (realtimeEvent == null) return;
+      if (realtimeEvent['event'] == null) return;
+      if (realtimeEvent['event']['type'] == 'input_audio_buffer.append') {
+        String base64 = realtimeEvent['event']['audio'];
+        Uint8List bytes = base64Decode(base64);
+        // print('Realtime event: $bytes');
+      }
       setState(() {
         final lastEvent = realtimeEvents.isNotEmpty ? realtimeEvents.last : null;
         if (lastEvent != null && lastEvent['event']['type'] == realtimeEvent['event']['type']) {
@@ -213,32 +233,32 @@ class _HomePageState extends State<HomePage> {
     client.on('error', (event) => print('Error: $event'));
 
     // Handle 'conversation.interrupted' events
-    client.on('conversation.interrupted', (_) async {
+    client.on('conversation.interrupted', (event) async {
+      print('conversation.interrupted $event');
       // Implement interruption handling if necessary
     });
 
     // Handle 'conversation.updated' events
     client.on('conversation.updated', (event) async {
       if (event == null) return;
-
+      // print('Conversation updated: $event');
       final item = event['item'];
       final delta = event['delta'];
-      final conversationItems = client.conversation.getItems();
+      // final conversationItems = client.conversation.getItems();
       if (delta != null && delta['audio'] != null) {
-        // Handle audio data if needed
-        // print('Audio:');
-        // print(delta['audio']);
-        enqueueAudioBytes(delta['audio']);
-        // don't you need to add a queue? would they play one above the other or get scheduled automatically?
+        // enqueueAudioBytes(delta['audio']);
       }
       if (item['status'] == 'completed' &&
           item['formatted']['audio'] != null &&
           item['formatted']['audio'].length > 0) {
-        print(item['content'][0]);
+        print('Completed audio: ${item['content'][0]}');
+        setState(() {
+          items.add(item);
+        });
       }
-      setState(() {
-        items = conversationItems;
-      });
+      // setState(() {
+      //   items = conversationItems;
+      // });
     });
 
     setState(() {
@@ -251,36 +271,51 @@ class _HomePageState extends State<HomePage> {
     client.sendUserMessageContent([
       {'type': 'input_text', 'text': 'Hello!'}
     ]);
-    _initRecording();
-    // _initiatePlayer();
   }
 
   @override
   void initState() {
     super.initState();
     _initClient();
+    _initRecording();
+    // _initiatePlayer();
   }
 
   @override
   void dispose() {
+    client.disconnect();
     client.reset();
+    record.stopRecorder();
+    _controller.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // You can display the items or events here as needed
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Page'),
       ),
       body: Center(
+        // child: ListView.builder(
+        //   itemBuilder: (context, index) {
+        //     final item = items[index];
+        //     if (item == null) return SizedBox();
+        //     return ListTile(
+        //       title: Text(item['object']),
+        //       subtitle: Text(item['content'][0]['transcript'] ?? ''),
+        //     );
+        //   },
+        //   itemCount: items.length,
+        // ),
         child: ListView.builder(
           itemBuilder: (context, index) {
             final item = realtimeEvents[index];
+            if (item['event']['audio'] != null) item['event']['audio'] = null;
+            if (item['event']['delta'] != null) item['event']['delta'] = null;
             return ListTile(
-              title: Text(item['event']['event_id']),
-              subtitle: Text(item['event']['type']),
+              title: Text('${item['event']['type']} (${item['count'] ?? 1})'),
+              subtitle: Text(item['event'].toString()),
             );
           },
           itemCount: realtimeEvents.length,
