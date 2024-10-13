@@ -6,6 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:logger/logger.dart' show Level;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+
+enum DeviceServiceStatus {
+  init,
+  ready,
+  scanning,
+  stop,
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,6 +28,9 @@ class _HomePageState extends State<HomePage> {
 
   List<Map<String, dynamic>> realtimeEvents = [];
   List<dynamic> items = [];
+  DeviceServiceStatus _status = DeviceServiceStatus.init;
+
+  BluetoothDevice bleDevice=BluetoothDevice.fromId('DF:D5:D9:DF:2D:58');
 
   late StreamController<Uint8List> _controller;
 
@@ -26,6 +38,9 @@ class _HomePageState extends State<HomePage> {
   Queue<Uint8List> audioQueue = Queue<Uint8List>();
 
   late FlutterSoundPlayer _player;
+ 
+
+
 
   _initiatePlayer() async {
     _player = FlutterSoundPlayer(logLevel: Level.off);
@@ -45,7 +60,6 @@ class _HomePageState extends State<HomePage> {
       bufferSize: 8192,
       sampleRate: 24000,
     );
-
     _controller.stream.listen((buffer) {
       client.appendInputAudio(buffer);
     });
@@ -56,7 +70,63 @@ class _HomePageState extends State<HomePage> {
       apiKey:
           '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',
     );
+    debugPrint('hi');
+    // var subscription = FlutterBluePlus.onScanResults.listen((results) {
+    //   if (results.isNotEmpty) {
+    //     ScanResult r = results.last; // the most recently found device
+    //     debugPrint('${r.device.remoteId}: "${r.advertisementData.advName}" found!');
+    //   }
+    // },
+    //   onError: (e) => debugPrint(e),
+    // );
 
+      await FlutterBluePlus.turnOn();
+
+
+    var discoverSubscription = FlutterBluePlus.onScanResults.listen(
+          (results) async {
+            if (results.isNotEmpty) {
+            // debugPrint('discovered result');
+            ScanResult r = results.last; //r is last device
+            debugPrint('${r.device.remoteId.str}: "${r.advertisementData.advName}" found!');
+
+            if (r.device.remoteId.str == 'DF:D5:D9:DF:2D:58') {
+              // bleDevice = r.device;
+              // debugPrint('connecting to device');
+              // await r.device.connect();
+            }
+            }
+      },
+      onError: (e) {
+        debugPrint('bleFindDevices error: $e');
+      },
+    );
+    // DF:D5:D9:DF:2D:58
+
+
+    FlutterBluePlus.cancelWhenScanComplete(discoverSubscription);
+    await FlutterBluePlus.adapterState.where((val) => val == BluetoothAdapterState.on).first;
+
+    await FlutterBluePlus.startScan(
+        // withServices:[Guid("180D")], // match any of the specified services
+        // withNames:["Bluno"], // *or* any of the specified names
+        timeout: Duration(seconds:5));
+
+    bleDevice.connect();
+
+    List<BluetoothService> services = await bleDevice.discoverServices();
+    services.forEach((service) {
+        // do something with service
+    });
+
+
+
+
+
+
+    // final String remoteId = "DF:D5:D9:DF:2D:58:";
+    // var device = BluetoothDevice.fromId(remoteId);
+    // await device.connect();
     // Update session with instructions and transcription model
     client.updateSession(
       instructions: 'You are a productive assistant, you speak very little, and answers short every time.',
