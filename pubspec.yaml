@@ -38,6 +38,7 @@ dependencies:
   openai_realtime_dart: ^0.0.1+1
   record: ^5.1.2
   flutter_sound: ^9.16.3
+  flutter_blue_plus: ^1.33.4
 dev_dependencies:
   flutter_test:
     sdk: flutter
