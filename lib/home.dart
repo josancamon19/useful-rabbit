@@ -90,8 +90,7 @@ class _HomePageState extends State<HomePage> {
 
   _initClient() async {
     client = RealtimeClient(
-      apiKey:
-          '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', // Replace with your actual API key
+      apiKey: '', // Replace with your actual API key
     );
 
     // Update session with instructions and transcription model
