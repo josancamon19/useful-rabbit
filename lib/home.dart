@@ -11,9 +11,9 @@ import 'package:logger/logger.dart' show Level;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:opus_dart/opus_dart.dart';
 
-List<int> resample(List<int> input, int outputLength) {
-  int inputLength = input.length;
-  List<int> output = List<int>.filled(outputLength, 0);
+List<int> resample(List<int> input, int outputLength) {//length = 320
+  int inputLength = input.length; //how many ints == 160 16 240
+  List<int> output = List<int>.filled(outputLength, 0); //fill to 320
   for (int i = 0; i < outputLength; i++) {
     // Calculate the corresponding position in the input data
     double position = i * (inputLength - 1) / (outputLength - 1);
@@ -174,8 +174,10 @@ class _HomePageState extends State<HomePage> {
       if (event.isNotEmpty) {
         if (buttonPressed) {
           List<int> content = event.sublist(3);
+          print(content);
           List<int> decoded = opusDecoder.decode(input: Uint8List.fromList(content));
-          Uint8List data = Uint8List.fromList(resample(decoded, 240));
+          // print(decoded.length);
+          Uint8List data = convertToUint8List(resample(decoded, 240)); // 240 ints converted to 16-bit and then to Uint8List
           print(data.length);
           client.appendInputAudio(data);
           // frames.add(decoded);
@@ -272,7 +274,7 @@ class _HomePageState extends State<HomePage> {
         Uint8List audio = item['formatted']['audio'];
         // Create a new list to store the downsampled audio
         int newLength = ((audio.length / 6).floor()) * 2; // We're taking two bytes every 6 bytes
-
+      //16k 10ms 320 
         Uint8List downSampledAudio = Uint8List(newLength);
 
         // Loop through the original audio, picking every 0,1 pair, 6,7 pair, etc.
