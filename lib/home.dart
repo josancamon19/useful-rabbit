@@ -74,13 +74,12 @@ class _HomePageState extends State<HomePage> {
   String audioCodecCharacteristicUuid = '19b10002-e8f2-537e-4f6c-d104768a1214';
   BluetoothService? buttonService;
   BluetoothService? audioService;
+  bool buttonPressed = false;
 
   _initBleConnection() async {
-
     await FlutterBluePlus.turnOn();
 
-    await FlutterBluePlus.startScan(
-        timeout: Duration(seconds: 5));
+    await FlutterBluePlus.startScan(timeout: Duration(seconds: 5));
 
     await bleDevice.connect();
 
@@ -113,30 +112,23 @@ class _HomePageState extends State<HomePage> {
     _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
       if (event.isNotEmpty) {
         debugPrint(event[0].toString());
-    }}
-    );
-      
-
-
-   _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
-    if (event.isNotEmpty)
-    {
-    debugPrint(event[0].toString());
-
-      if (event[0] == 3)
-      {
-        debugPrint('Button long pressed');
-        buttonPressed = true;
-        debugPrint('Button pressed: $buttonPressed');
       }
-      else if (event[0] == 5)
-      {
-        debugPrint('Button release');
-        buttonPressed = false;
-        debugPrint('Button pressed: $buttonPressed');
+    });
 
+    _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
+      if (event.isNotEmpty) {
+        debugPrint(event[0].toString());
+
+        if (event[0] == 3) {
+          debugPrint('Button long pressed');
+          buttonPressed = true;
+          debugPrint('Button pressed: $buttonPressed');
+        } else if (event[0] == 5) {
+          debugPrint('Button release');
+          buttonPressed = false;
+          debugPrint('Button pressed: $buttonPressed');
+        }
       }
-    }
     });
 
     if (audioService == null) {
@@ -152,16 +144,13 @@ class _HomePageState extends State<HomePage> {
     await audioCharacteristic.setNotifyValue(true);
 
     _micStream = audioCharacteristic!.lastValueStream.listen((event) {
-
-    if (event.isNotEmpty)
-    {
-    if(buttonPressed)
-    {
-    debugPrint('Event length: ${event.length}');
-    }
-    }
-   }); 
-   //audio
+      if (event.isNotEmpty) {
+        if (buttonPressed) {
+          debugPrint('Event length: ${event.length}');
+        }
+      }
+    });
+    //audio
     // var audioDataStreamCharacteristic = getCharacteristic(_friendService!, audioDataStreamCharacteristicUuid);
   }
 
