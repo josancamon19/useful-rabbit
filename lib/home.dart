@@ -73,8 +73,11 @@ class _HomePageState extends State<HomePage> {
   String friendServiceUuid = '19b10000-e8f2-537e-4f6c-d104768a1214';
   String audioDataStreamCharacteristicUuid = '19b10001-e8f2-537e-4f6c-d104768a1214';
   String audioCodecCharacteristicUuid = '19b10002-e8f2-537e-4f6c-d104768a1214';
+  String audioSpeakerCharacteristicUuid = '19b10003-e8f2-537e-4f6c-d104768a1214';
+
   BluetoothService? buttonService;
   BluetoothService? audioService;
+  BluetoothCharacteristic? speakerCharacteristic;
   bool buttonPressed = false;
 
   _initBleConnection() async {
@@ -113,12 +116,6 @@ class _HomePageState extends State<HomePage> {
     _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
       if (event.isNotEmpty) {
         debugPrint(event[0].toString());
-      }
-    });
-
-    _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
-      if (event.isNotEmpty) {
-        debugPrint(event[0].toString());
 
         if (event[0] == 3) {
           debugPrint('Button long pressed');
@@ -151,6 +148,16 @@ class _HomePageState extends State<HomePage> {
         }
       }
     });
+
+    speakerCharacteristic = audioService!.characteristics.firstWhere(
+      (characteristic) => characteristic.uuid.str128.toLowerCase() == audioSpeakerCharacteristicUuid.toLowerCase(),
+    );
+    if (speakerCharacteristic == null) {
+      debugPrint('Speaker error');
+
+    } else {
+      debugPrint('Speaker service found');
+    }
     //audio
     // var audioDataStreamCharacteristic = getCharacteristic(_friendService!, audioDataStreamCharacteristicUuid);
   }
@@ -228,9 +235,16 @@ class _HomePageState extends State<HomePage> {
           item['formatted']['audio'].length > 0) {
         // print('Received: ${item}');
         Uint8List audio = item['formatted']['audio'];
+        // Downsample the audio list by 3
+        Uint8List downsampledAudio = [];
+        for (int i = 0; i < audio.length ~/ 6; i += 6) {
+          downsampledAudio.add(audio[i]);
+          downsampledAudio.add(audio[i + 1]);
+        }
+        // audio = Uint8List.fromList(downsampledAudio);
         // print('Audio completed: ${audio.length} bytes');
         await _player.startPlayer(
-          fromDataBuffer: audio,
+          fromDataBuffer: downsampledAudio,
           codec: Codec.pcm16,
           numChannels: 1,
           sampleRate: 24000,
