@@ -58,8 +58,9 @@ class _HomePageState extends State<HomePage> {
       bufferSize: 8192,
       sampleRate: 24000,
     );
-    _controller.stream.listen((buffer) {
-      // client.appendInputAudio();
+    _controller.stream.listen((Food buffer) {
+      Uint8List data = (buffer as FoodData).data!;
+      client.appendInputAudio(data);
     });
   }
 
