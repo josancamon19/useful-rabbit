@@ -11,6 +11,32 @@ import 'package:logger/logger.dart' show Level;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 import 'package:opus_dart/opus_dart.dart';
 
+List<int> resample(List<int> input, int outputLength) {
+  int inputLength = input.length;
+  List<int> output = List<int>.filled(outputLength, 0);
+  for (int i = 0; i < outputLength; i++) {
+    // Calculate the corresponding position in the input data
+    double position = i * (inputLength - 1) / (outputLength - 1);
+    int index = position.floor();
+    double fraction = position - index;
+    int sample1 = input[index];
+    int sample2 = input[(index + 1).clamp(0, inputLength - 1)];
+    // Linear interpolation
+    output[i] = (sample1 + (sample2 - sample1) * fraction).round();
+  }
+  return output;
+}
+
+Uint8List convertToUint8List(List<int> samples) {
+  Uint8List bytes = Uint8List(samples.length * 2);
+  ByteData byteData = bytes.buffer.asByteData();
+  for (int i = 0; i < samples.length; i++) {
+    // Pack each 16-bit sample into two bytes (little-endian format)
+    byteData.setInt16(i * 2, samples[i], Endian.little);
+  }
+  return bytes;
+}
+
 enum DeviceServiceStatus {
   init,
   ready,
@@ -31,8 +57,7 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> realtimeEvents = [];
   List<dynamic> items = [];
 
-  BluetoothDevice bleDevice =
-      BluetoothDevice.fromId(dotenv.env['BT_DEVICE_ID']!);
+  BluetoothDevice bleDevice = BluetoothDevice.fromId(dotenv.env['BT_DEVICE_ID']!);
 
   late StreamController<Food> _controller;
 
@@ -68,25 +93,20 @@ class _HomePageState extends State<HomePage> {
   StreamSubscription? _micStream;
   StreamSubscription? _buttonStream;
 
-  String buttonDataStreamCharacteristicUuid =
-      '23ba7924-0000-1000-7450-346eac492e92';
-  String buttonTriggerCharacteristicUuid =
-      '23ba7925-0000-1000-7450-346eac492e92';
+  String buttonDataStreamCharacteristicUuid = '23ba7924-0000-1000-7450-346eac492e92';
+  String buttonTriggerCharacteristicUuid = '23ba7925-0000-1000-7450-346eac492e92';
 
   String friendServiceUuid = '19b10000-e8f2-537e-4f6c-d104768a1214';
-  String audioDataStreamCharacteristicUuid =
-      '19b10001-e8f2-537e-4f6c-d104768a1214';
+  String audioDataStreamCharacteristicUuid = '19b10001-e8f2-537e-4f6c-d104768a1214';
   String audioCodecCharacteristicUuid = '19b10002-e8f2-537e-4f6c-d104768a1214';
-  String audioSpeakerCharacteristicUuid =
-      '19b10003-e8f2-537e-4f6c-d104768a1214';
+  String audioSpeakerCharacteristicUuid = '19b10003-e8f2-537e-4f6c-d104768a1214';
 
   BluetoothService? buttonService;
   BluetoothService? audioService;
   BluetoothCharacteristic? speakerCharacteristic;
   bool buttonPressed = false;
 
-  final SimpleOpusDecoder opusDecoder =
-      SimpleOpusDecoder(sampleRate: 16000, channels: 1);
+  final SimpleOpusDecoder opusDecoder = SimpleOpusDecoder(sampleRate: 16000, channels: 1);
   List<List<int>> frames = [];
 
   _initBleConnection() async {
@@ -106,11 +126,9 @@ class _HomePageState extends State<HomePage> {
     });
 
     // final buttonService = await getServiceByUuid('DF:D5:D9:DF:2D:58', buttonDataStreamCharacteristicUuid);
-    buttonService = services.firstWhere((service) =>
-        service.uuid.str128.toLowerCase() ==
-        buttonDataStreamCharacteristicUuid);
-    audioService = services.firstWhere(
-        (service) => service.uuid.str128.toLowerCase() == friendServiceUuid);
+    buttonService =
+        services.firstWhere((service) => service.uuid.str128.toLowerCase() == buttonDataStreamCharacteristicUuid);
+    audioService = services.firstWhere((service) => service.uuid.str128.toLowerCase() == friendServiceUuid);
     if (buttonService == null) {
       debugPrint('Button error');
       return null;
@@ -119,9 +137,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     var buttonCharacteristic = buttonService!.characteristics.firstWhere(
-      (characteristic) =>
-          characteristic.uuid.str128.toLowerCase() ==
-          buttonTriggerCharacteristicUuid.toLowerCase(),
+      (characteristic) => characteristic.uuid.str128.toLowerCase() == buttonTriggerCharacteristicUuid.toLowerCase(),
     );
 
     await buttonCharacteristic.setNotifyValue(true);
@@ -150,9 +166,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     var audioCharacteristic = audioService!.characteristics.firstWhere(
-      (characteristic) =>
-          characteristic.uuid.str128.toLowerCase() ==
-          audioDataStreamCharacteristicUuid.toLowerCase(),
+      (characteristic) => characteristic.uuid.str128.toLowerCase() == audioDataStreamCharacteristicUuid.toLowerCase(),
     );
     await audioCharacteristic.setNotifyValue(true);
 
@@ -160,18 +174,17 @@ class _HomePageState extends State<HomePage> {
       if (event.isNotEmpty) {
         if (buttonPressed) {
           List<int> content = event.sublist(3);
-          List<int> decoded =
-              opusDecoder.decode(input: Uint8List.fromList(content));
-          print(decoded);
+          List<int> decoded = opusDecoder.decode(input: Uint8List.fromList(content));
+          Uint8List data = Uint8List.fromList(resample(decoded, 240));
+          print(data.length);
+          client.appendInputAudio(data);
           // frames.add(decoded);
         }
       }
     });
 
     speakerCharacteristic = audioService!.characteristics.firstWhere(
-      (characteristic) =>
-          characteristic.uuid.str128.toLowerCase() ==
-          audioSpeakerCharacteristicUuid.toLowerCase(),
+      (characteristic) => characteristic.uuid.str128.toLowerCase() == audioSpeakerCharacteristicUuid.toLowerCase(),
     );
     await speakerCharacteristic!.setNotifyValue(true);
     if (speakerCharacteristic == null) {
@@ -206,8 +219,7 @@ class _HomePageState extends State<HomePage> {
     );
     client.addTool({
       'name': 'add_item_to_cart',
-      'description':
-          'Function to use for adding items to the amazon shopping cart.',
+      'description': 'Function to use for adding items to the amazon shopping cart.',
       'parameters': {
         'type': 'object',
         'properties': {
@@ -229,10 +241,8 @@ class _HomePageState extends State<HomePage> {
       if (realtimeEvent['event'] == null) return;
 
       setState(() {
-        final lastEvent =
-            realtimeEvents.isNotEmpty ? realtimeEvents.last : null;
-        if (lastEvent != null &&
-            lastEvent['event']['type'] == realtimeEvent['event']['type']) {
+        final lastEvent = realtimeEvents.isNotEmpty ? realtimeEvents.last : null;
+        if (lastEvent != null && lastEvent['event']['type'] == realtimeEvent['event']['type']) {
           lastEvent['count'] = (lastEvent['count'] ?? 0) + 1;
           realtimeEvents[realtimeEvents.length - 1] = lastEvent;
         } else {
@@ -261,8 +271,7 @@ class _HomePageState extends State<HomePage> {
         // print('Received: ${item}');
         Uint8List audio = item['formatted']['audio'];
         // Create a new list to store the downsampled audio
-        int newLength = ((audio.length / 6).floor()) *
-            2; // We're taking two bytes every 6 bytes
+        int newLength = ((audio.length / 6).floor()) * 2; // We're taking two bytes every 6 bytes
 
         Uint8List downSampledAudio = Uint8List(newLength);
 
@@ -275,23 +284,21 @@ class _HomePageState extends State<HomePage> {
 
         for (int i = 0; i < downSampledAudio.length; i += chunkSize) {
           // Determine the end of the current chunk, ensuring it doesn't exceed the array length
-          int end = (i + chunkSize < downSampledAudio.length)
-              ? i + chunkSize
-              : downSampledAudio.length;
+          int end = (i + chunkSize < downSampledAudio.length) ? i + chunkSize : downSampledAudio.length;
 
           // Extract the current chunk
           Uint8List chunk = downSampledAudio.sublist(i, end);
           print('Chunk size: ${chunk.length}');
-          await speakerCharacteristic!.write(chunk);
+          // await speakerCharacteristic!.write(chunk);
         }
-        await speakerCharacteristic!.write(Uint8List(0));
+        // await speakerCharacteristic!.write(Uint8List(0));
 
-        // await _player.startPlayer(
-        //   fromDataBuffer: audio,
-        //   codec: Codec.pcm16,
-        //   numChannels: 1,
-        //   sampleRate: 24000,
-        // );
+        await _player.startPlayer(
+          fromDataBuffer: audio,
+          codec: Codec.pcm16,
+          numChannels: 1,
+          sampleRate: 24000,
+        );
 
         setState(() {
           items.add(item);
@@ -361,8 +368,7 @@ class _HomePageState extends State<HomePage> {
                 itemBuilder: (context, index) {
                   final item = items[index];
                   final transcript = item['content'][0]['transcript'] ?? '';
-                  if (item == null || transcript.toString().isEmpty)
-                    return const SizedBox();
+                  if (item == null || transcript.toString().isEmpty) return const SizedBox();
                   return ListTile(
                     title: Text(item['object']),
                     subtitle: Text(transcript),
@@ -382,12 +388,7 @@ class _HomePageState extends State<HomePage> {
                   shape: BoxShape.circle,
                   color: Colors.grey, // Grey color for the button
                   boxShadow: isPressed
-                      ? [
-                          BoxShadow(
-                              color: Colors.grey.withOpacity(0.5),
-                              blurRadius: 20,
-                              spreadRadius: 5)
-                        ]
+                      ? [BoxShadow(color: Colors.grey.withOpacity(0.5), blurRadius: 20, spreadRadius: 5)]
                       : [],
                 ),
                 child: const Center(
