@@ -247,7 +247,7 @@ class _HomePageState extends State<HomePage> {
           fromDataBuffer: downsampledAudio,
           codec: Codec.pcm16,
           numChannels: 1,
-          sampleRate: 24000,
+          sampleRate: 8000,
         );
         setState(() {
           items.add(item);
