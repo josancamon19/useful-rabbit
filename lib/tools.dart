@@ -1,35 +1,42 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 //  // Map<String, dynamic> memoryKv = {};
 //   // Map<String, dynamic> marker = {};
 //   // Map<String, dynamic> coords = {};
 // // Add the 'set_memory' tool
-// client.addTool(
-// {
-// 'name': 'set_memory',
-// 'description': 'Saves important data about the user into memory.',
-// 'parameters': {
-// 'type': 'object',
-// 'properties': {
-// 'key': {
-// 'type': 'string',
-// 'description': 'The key of the memory value. Always use lowercase and underscores, no other characters.',
-// },
-// 'value': {
-// 'type': 'string',
-// 'description': 'Value can be anything represented as a string',
-// },
-// },
-// 'required': ['key', 'value'],
-// },
-// },
-// (params) async {
-// // final key = params['key'];
-// // final value = params['value'];
-// // setState(() {
-// //   memoryKv[key] = value;
-// // });
-// return {'ok': true};
-// },
-// );
+void addBasicMemoryToolToClient(client) {
+  client.addTool(
+    {
+      'name': 'set_memory',
+      'description': 'Saves important data about the user into memory.',
+      'parameters': {
+        'type': 'object',
+        'properties': {
+          'key': {
+            'type': 'string',
+            'description': 'The key of the memory value. Always use lowercase and underscores, no other characters.',
+          },
+          'value': {
+            'type': 'string',
+            'description': 'Value can be anything represented as a string',
+          },
+        },
+        'required': ['key', 'value'],
+      },
+    },
+    (params) async {
+      print(params);
+// final key = params['key'];
+// final value = params['value'];
+// setState(() {
+//   memoryKv[key] = value;
+// });
+      return {'ok': true};
+    },
+  );
+}
 //
 // // Add the 'get_weather' tool
 // client.addTool(
@@ -97,3 +104,16 @@
 // return {'ok': true};
 // },
 // );
+
+Future<String> addItemsOnAmazonToCart() async {
+  String url = 'https://camel-lucky-reliably.ngrok-free.app/buy';
+  final response = await http.post(Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(['Zero to One by Peter Thiel']));
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body)['message'];
+  }
+  return 'Failed to add items to cart';
+}

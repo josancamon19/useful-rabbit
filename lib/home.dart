@@ -43,9 +43,6 @@ class _HomePageState extends State<HomePage> {
     _player = FlutterSoundPlayer(logLevel: Level.off);
     await _player.openPlayer();
     await _player.setVolume(1.0);
-    // TODO: set env var
-    // TODO: implement push to talk
-    // TODO: implement multion
   }
 
   _initRecording() async {
@@ -103,7 +100,7 @@ class _HomePageState extends State<HomePage> {
     await FlutterBluePlus.startScan(
         // withServices:[Guid("180D")], // match any of the specified services
         // withNames:["Bluno"], // *or* any of the specified names
-        timeout: Duration(seconds: 5));
+        timeout: const Duration(seconds: 5));
 
     bleDevice.connect();
 
@@ -115,22 +112,58 @@ class _HomePageState extends State<HomePage> {
 
   _initClient() async {
     client = RealtimeClient(apiKey: dotenv.env['OPENAI_API_KEY']);
+    // addBasicMemoryToolToClient(client);
 
     client.updateSession(
-      instructions: 'You are a productive assistant, you speak very little, and answers short every time.',
+      instructions: '''
+      System settings:
+      Tool use: enabled.
+      
+      Instructions: You are a productive assistant, you speak very little, and answers short every time.
+      Personality: Be short and concise.
+      ''',
       inputAudioTranscription: {'model': 'whisper-1'},
-      turnDetection: {
-        "type": "server_vad",
-        "threshold": 0.5,
-        "prefix_padding_ms": 300,
-        "silence_duration_ms": 200,
+      toolChoice: 'auto',
+      // turnDetection: {
+      //   "type": "server_vad",
+      //   "threshold": 0.5,
+      //   "prefix_padding_ms": 300,
+      //   "silence_duration_ms": 200,
+      // },
+    );
+    client.addTool(
+      {
+        'name': 'get_weather',
+        'description': 'Retrieves the weather for a given lat, lng coordinate pair. Specify a label for the location.',
+        'parameters': {
+          'type': 'object',
+          'properties': {
+            'lat': {
+              'type': 'number',
+              'description': 'Latitude',
+            },
+            'lng': {
+              'type': 'number',
+              'description': 'Longitude',
+            },
+            'location': {
+              'type': 'string',
+              'description': 'Name of the location',
+            },
+          },
+          'required': ['lat', 'lng', 'location'],
+        },
+      },
+      (params) async {
+        print('get_weather params: $params');
+        return {'ok': '24 degrees celcius, sunny, no rain'};
       },
     );
-
     // Set up event handling for 'realtime.event'
     client.on('realtime.event', (realtimeEvent) {
       if (realtimeEvent == null) return;
       if (realtimeEvent['event'] == null) return;
+      // TODO: user events not received
       setState(() {
         final lastEvent = realtimeEvents.isNotEmpty ? realtimeEvents.last : null;
         if (lastEvent != null && lastEvent['event']['type'] == realtimeEvent['event']['type']) {
@@ -138,6 +171,7 @@ class _HomePageState extends State<HomePage> {
           realtimeEvents[realtimeEvents.length - 1] = lastEvent;
         } else {
           realtimeEvents.add(realtimeEvent);
+          print('realtime.event: $realtimeEvent');
         }
       });
     });
@@ -154,16 +188,19 @@ class _HomePageState extends State<HomePage> {
       if (delta != null && delta['audio'] != null) {
         // print(delta['audio']);
       }
-      if (item['status'] == 'completed' &&
+      if (item['role'] != 'user' &&
+          item['status'] == 'completed' &&
           item['formatted']['audio'] != null &&
           item['formatted']['audio'].length > 0) {
+        // print('Received: ${item}');
         Uint8List audio = item['formatted']['audio'];
-        // await _player.startPlayer(
-        //   fromDataBuffer: audio,
-        //   codec: Codec.pcm16,
-        //   numChannels: 1,
-        //   sampleRate: 24000,
-        // );
+        // print('Audio completed: ${audio.length} bytes');
+        await _player.startPlayer(
+          fromDataBuffer: audio,
+          codec: Codec.pcm16,
+          numChannels: 1,
+          sampleRate: 24000,
+        );
         setState(() {
           items.add(item);
         });
@@ -187,7 +224,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _initBleConnection();
     _initClient();
-    _initRecording();
+    // _initRecording();
     _initiatePlayer();
   }
 
@@ -200,6 +237,24 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  void _onLongPressStart(LongPressStartDetails details) {
+    setState(() {
+      isPressed = true;
+    });
+    _player.stopPlayer();
+    _initRecording(); // Start recording
+  }
+
+  void _onLongPressEnd(LongPressEndDetails details) async {
+    setState(() {
+      isPressed = false;
+    });
+    await record.stopRecorder();
+    client.createResponse();
+  }
+
+  bool isPressed = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -207,31 +262,49 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Home Page'),
       ),
       body: Center(
-        child: ListView.builder(
-          itemBuilder: (context, index) {
-            final item = items[index];
-            final transcript = item['content'][0]['transcript'] ?? '';
-            if (item == null || transcript.toString().isEmpty) return const SizedBox();
-            // print(item);
-            return ListTile(
-              title: Text(item['object']),
-              subtitle: Text(transcript),
-            );
-          },
-          itemCount: items.length,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final transcript = item['content'][0]['transcript'] ?? '';
+                  if (item == null || transcript.toString().isEmpty) return const SizedBox();
+                  return ListTile(
+                    title: Text(item['object']),
+                    subtitle: Text(transcript),
+                  );
+                },
+                itemCount: items.length,
+              ),
+            ),
+            GestureDetector(
+              onLongPressStart: _onLongPressStart,
+              onLongPressEnd: _onLongPressEnd,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: isPressed ? 120 : 100,
+                height: isPressed ? 120 : 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey, // Grey color for the button
+                  boxShadow: isPressed
+                      ? [BoxShadow(color: Colors.grey.withOpacity(0.5), blurRadius: 20, spreadRadius: 5)]
+                      : [],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.mic,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
-        // child: ListView.builder(
-        //   itemBuilder: (context, index) {
-        //     final item = realtimeEvents[index];
-        //     if (item['event']['audio'] != null) item['event']['audio'] = null;
-        //     if (item['event']['delta'] != null) item['event']['delta'] = null;
-        //     return ListTile(
-        //       title: Text('${item['event']['type']} (${item['count'] ?? 1})'),
-        //       subtitle: Text(item['event'].toString()),
-        //     );
-        //   },
-        //   itemCount: realtimeEvents.length,
-        // ),
       ),
     );
   }
