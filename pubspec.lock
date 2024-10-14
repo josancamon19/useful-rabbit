@@ -114,26 +114,26 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_sound
-      sha256: "31f9b2058a152520774f98147adb9f5df3b2e9ee0d5b6a7f4f07bec9feeca4e3"
+      sha256: "1f40b26b92907a433afe877c927cd48f5a2e4d0f7188e5d39eb5756008aa51ab"
       url: "https://pub.dev"
     source: hosted
-    version: "9.16.3"
+    version: "9.6.0"
   flutter_sound_platform_interface:
     dependency: transitive
     description:
       name: flutter_sound_platform_interface
-      sha256: "60ce97b065ca12161d501575dfcd49ec0764545a5e9ff9576dc96eb19f189e76"
+      sha256: "2e218521d8187b9a4c65063ad9c79bfe88119531ff68047a2eaa6b027cb276bb"
       url: "https://pub.dev"
     source: hosted
-    version: "9.16.3"
+    version: "9.6.0"
   flutter_sound_web:
     dependency: transitive
     description:
       name: flutter_sound_web
-      sha256: c557aebe181ce1d2261a4cb9e3bb8eada18af30745791a7241e8d00152c5fa06
+      sha256: "5013a15e4e69a4bdc8badd729130eef43c3305e30ba8e6933f863436ce969932"
       url: "https://pub.dev"
     source: hosted
-    version: "9.16.3"
+    version: "9.6.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -160,14 +160,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.2"
+  inject_js:
+    dependency: transitive
+    description:
+      name: inject_js
+      sha256: "3ab213e2c76375a611f57eb0044d32c6e18c5091d52510e7fe9f88f6bee83d19"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   js:
     dependency: transitive
     description:
       name: js
-      sha256: c1b2e9b5ea78c45e1a0788d29606ba27dc5f71f019f32ca5140f61ef071838cf
+      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.1"
+    version: "0.6.7"
   json_annotation:
     dependency: transitive
     description:
@@ -264,6 +272,63 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.1+1"
+  opus_dart:
+    dependency: "direct main"
+    description:
+      name: opus_dart
+      sha256: e8ab4774409997af33cbfdfe91a186854ed6458b2fec66b0e52f4434b1af2f7c
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
+  opus_flutter:
+    dependency: "direct main"
+    description:
+      name: opus_flutter
+      sha256: "86edfdab1220d64bd7daa3e9bda1785cc0c8c793629e89f34a2a87bdfce57e25"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.3"
+  opus_flutter_android:
+    dependency: "direct overridden"
+    description:
+      path: opus_flutter_android
+      ref: HEAD
+      resolved-ref: "67ba9d8704a93c8a30b9266f4df6663e0b08e3c8"
+      url: "https://github.com/mdmohsin7/opus_flutter.git"
+    source: git
+    version: "3.0.1"
+  opus_flutter_ios:
+    dependency: transitive
+    description:
+      name: opus_flutter_ios
+      sha256: c999bbe8b8f1a4073fb62de6cc04ecd3ab3acdefa6b8d78b03c0dac9c81ef0fa
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
+  opus_flutter_platform_interface:
+    dependency: transitive
+    description:
+      name: opus_flutter_platform_interface
+      sha256: "41180b74f1dacc131270d49815fd4eb46bd7cc5ad57aac84eab748d08de59138"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
+  opus_flutter_web:
+    dependency: transitive
+    description:
+      name: opus_flutter_web
+      sha256: "037a4cdb27c3a1c05c85aed3dbe0a4b8c2f49ccce33cef259ef34f1815af6785"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.3"
+  opus_flutter_windows:
+    dependency: transitive
+    description:
+      name: opus_flutter_windows
+      sha256: "6a26862dd331c9c4b5e4c805efe3dd4e4a049e4a18bee230d994c25d72928a3b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   path:
     dependency: transitive
     description:
@@ -517,6 +582,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  web_ffi:
+    dependency: transitive
+    description:
+      name: web_ffi
+      sha256: "48ef8037f7bc051d11b88d0f2903e02bec21092c51833d37c3361c36e3edc4f7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.2"
   web_socket:
     dependency: transitive
     description:

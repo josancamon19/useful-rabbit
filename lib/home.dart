@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
 
   BluetoothDevice bleDevice = BluetoothDevice.fromId('EB:7D:C3:F4:52:2D');
 
-  late StreamController<Uint8List> _controller;
+  late StreamController<Food> _controller;
 
   final record = FlutterSoundRecorder(logLevel: Level.off);
   Queue<Uint8List> audioQueue = Queue<Uint8List>();
@@ -48,7 +48,7 @@ class _HomePageState extends State<HomePage> {
 
   _initRecording() async {
     // TODO: Check and request permission
-    _controller = StreamController<Uint8List>();
+    _controller = StreamController<Food>();
     await record.openRecorder();
     await record.startRecorder(
       toStream: _controller.sink,
@@ -59,7 +59,7 @@ class _HomePageState extends State<HomePage> {
       sampleRate: 24000,
     );
     _controller.stream.listen((buffer) {
-      client.appendInputAudio(buffer);
+      // client.appendInputAudio();
     });
   }
 
