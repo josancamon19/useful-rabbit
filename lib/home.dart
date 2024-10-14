@@ -76,43 +76,10 @@ class _HomePageState extends State<HomePage> {
   BluetoothService? audioService;
 
   _initBleConnection() async {
-    // var subscription = FlutterBluePlus.onScanResults.listen((results) {
-    //   if (results.isNotEmpty) {
-    //     ScanResult r = results.last; // the most recently found device
-    //     debugPrint('${r.device.remoteId}: "${r.advertisementData.advName}" found!');
-    //   }
-    // },
-    //   onError: (e) => debugPrint(e),
-    // );
 
     await FlutterBluePlus.turnOn();
 
-    var discoverSubscription = FlutterBluePlus.onScanResults.listen((results) async {
-      if (results.isNotEmpty) {
-        // debugPrint('discovered result');
-        ScanResult r = results.last; //r is last device
-        // debugPrint('${r.device.remoteId.str}: "${r.advertisementData.advName}" found!');
-      }
-    });
-    //       if (r.device.remoteId.str == 'DF:D5:D9:DF:2D:58') {
-    //         // bleDevice = r.device;
-    //         // debugPrint('connecting to device');
-    //         // await r.device.connect();
-    //       }
-    //     }
-    //   },
-    //   onError: (e) {
-    //     debugPrint('bleFindDevices error: $e');
-    //   },
-    // );
-    // // DF:D5:D9:DF:2D:58
-
-    // FlutterBluePlus.cancelWhenScanComplete(discoverSubscription);
-    // await FlutterBluePlus.adapterState.where((val) => val == BluetoothAdapterState.on).first;
-
     await FlutterBluePlus.startScan(
-        // withServices:[Guid("180D")], // match any of the specified services
-        // withNames:["Bluno"], // *or* any of the specified names
         timeout: Duration(seconds: 5));
 
     await bleDevice.connect();
@@ -146,11 +113,30 @@ class _HomePageState extends State<HomePage> {
     _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
       if (event.isNotEmpty) {
         debugPrint(event[0].toString());
+    }}
+    );
+      
 
-        if (event[0] == 4) {
-          debugPrint('Button pressed');
-        }
+
+   _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
+    if (event.isNotEmpty)
+    {
+    debugPrint(event[0].toString());
+
+      if (event[0] == 3)
+      {
+        debugPrint('Button long pressed');
+        buttonPressed = true;
+        debugPrint('Button pressed: $buttonPressed');
       }
+      else if (event[0] == 5)
+      {
+        debugPrint('Button release');
+        buttonPressed = false;
+        debugPrint('Button pressed: $buttonPressed');
+
+      }
+    }
     });
 
     if (audioService == null) {
@@ -166,9 +152,16 @@ class _HomePageState extends State<HomePage> {
     await audioCharacteristic.setNotifyValue(true);
 
     _micStream = audioCharacteristic!.lastValueStream.listen((event) {
-      if (event.isNotEmpty) {}
-    });
-    //audio
+
+    if (event.isNotEmpty)
+    {
+    if(buttonPressed)
+    {
+    debugPrint('Event length: ${event.length}');
+    }
+    }
+   }); 
+   //audio
     // var audioDataStreamCharacteristic = getCharacteristic(_friendService!, audioDataStreamCharacteristicUuid);
   }
 

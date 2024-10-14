@@ -37,9 +37,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   openai_realtime_dart: ^0.0.1+1
   record: ^5.1.2
-  flutter_sound: ^9.16.3
+  flutter_sound: ^9.16.0
   flutter_blue_plus: ^1.33.4
   flutter_dotenv: ^5.1.0
+  # opus_flutter: ^3.0.3
+  # opus_dart: ^3.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
