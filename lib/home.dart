@@ -61,34 +61,34 @@ class _HomePageState extends State<HomePage> {
 
   late StreamController<Food> _controller;
 
-  final record = FlutterSoundRecorder(logLevel: Level.off);
+  // final record = FlutterSoundRecorder(logLevel: Level.off);
   Queue<Uint8List> audioQueue = Queue<Uint8List>();
 
-  late FlutterSoundPlayer _player;
+  // late FlutterSoundPlayer _player;
 
-  _initiatePlayer() async {
-    _player = FlutterSoundPlayer(logLevel: Level.off);
-    await _player.openPlayer();
-    await _player.setVolume(1.0);
-  }
+  // _initiatePlayer() async {
+  //   _player = FlutterSoundPlayer(logLevel: Level.off);
+  //   await _player.openPlayer();
+  //   await _player.setVolume(1.0);
+  // }
 
-  _initRecording() async {
-    // TODO: Check and request permission
-    _controller = StreamController<Food>();
-    await record.openRecorder();
-    await record.startRecorder(
-      toStream: _controller.sink,
-      codec: Codec.pcm16,
-      numChannels: 1,
-      bitRate: 16000,
-      bufferSize: 8192,
-      sampleRate: 24000,
-    );
-    _controller.stream.listen((Food buffer) {
-      Uint8List data = (buffer as FoodData).data!;
-      client.appendInputAudio(data);
-    });
-  }
+  // _initRecording() async {
+  //   // TODO: Check and request permission
+  //   _controller = StreamController<Food>();
+  //   await record.openRecorder();
+  //   await record.startRecorder(
+  //     toStream: _controller.sink,
+  //     codec: Codec.pcm16,
+  //     numChannels: 1,
+  //     bitRate: 16000,
+  //     bufferSize: 8192,
+  //     sampleRate: 24000,
+  //   );
+  //   _controller.stream.listen((Food buffer) {
+  //     Uint8List data = (buffer as FoodData).data!;
+  //     client.appendInputAudio(data);
+  //   });
+  // }
 
   StreamSubscription? _micStream;
   StreamSubscription? _buttonStream;
@@ -112,10 +112,10 @@ class _HomePageState extends State<HomePage> {
   _initBleConnection() async {
     await FlutterBluePlus.turnOn();
 
-    await FlutterBluePlus.startScan(timeout: Duration(seconds: 5));
+    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
 
     await bleDevice.connect();
-    await bleDevice.requestMtu(512);
+    // await bleDevice.requestMtu(512);
     if (bleDevice.isConnected) {
       debugPrint('Connected to device');
     }
@@ -289,16 +289,16 @@ class _HomePageState extends State<HomePage> {
           // Extract the current chunk
           Uint8List chunk = downSampledAudio.sublist(i, end);
           print('Chunk size: ${chunk.length}');
-          // await speakerCharacteristic!.write(chunk);
+          await speakerCharacteristic!.write(chunk, withoutResponse: true);
         }
-        // await speakerCharacteristic!.write(Uint8List(0));
+        await speakerCharacteristic!.write(Uint8List(0), withoutResponse: true);
 
-        await _player.startPlayer(
-          fromDataBuffer: audio,
-          codec: Codec.pcm16,
-          numChannels: 1,
-          sampleRate: 24000,
-        );
+        // await _player.startPlayer(
+        //   fromDataBuffer: audio,
+        //   codec: Codec.pcm16,
+        //   numChannels: 1,
+        //   sampleRate: 24000,
+        // );
 
         setState(() {
           items.add(item);
@@ -323,14 +323,14 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _initBleConnection();
     // _initRecording();
-    _initiatePlayer();
+    // _initiatePlayer();
   }
 
   @override
   void dispose() {
     client.disconnect();
     client.reset();
-    record.stopRecorder();
+    // record.stopRecorder();
     _controller.close();
     super.dispose();
   }
@@ -339,15 +339,15 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       isPressed = true;
     });
-    _player.stopPlayer();
-    _initRecording(); // Start recording
+    // _player.stopPlayer();
+    // _initRecording(); // Start recording
   }
 
   void _onLongPressEnd(LongPressEndDetails details) async {
     setState(() {
       isPressed = false;
     });
-    await record.stopRecorder();
+    // await record.stopRecorder();
     client.createResponse();
   }
 
