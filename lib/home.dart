@@ -10,6 +10,8 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:logger/logger.dart' show Level;
 import 'package:openai_realtime_dart/openai_realtime_dart.dart';
 
+import 'package:opus_dart/opus_dart.dart';
+
 enum DeviceServiceStatus {
   init,
   ready,
@@ -79,6 +81,9 @@ class _HomePageState extends State<HomePage> {
   BluetoothCharacteristic? speakerCharacteristic;
   bool buttonPressed = false;
 
+
+  final SimpleOpusDecoder opusDecoder = SimpleOpusDecoder(sampleRate: 16000, channels: 1);
+  List<List<int>> frames = [];
   _initBleConnection() async {
     await FlutterBluePlus.turnOn();
 
@@ -143,7 +148,9 @@ class _HomePageState extends State<HomePage> {
     _micStream = audioCharacteristic!.lastValueStream.listen((event) {
       if (event.isNotEmpty) {
         if (buttonPressed) {
-          debugPrint('Event length: ${event.length}');
+          List<int> content = event.sublist(3);
+          List<int> decoded = opusDecoder.decode(content);
+          frames.add(decoded);
         }
       }
     });
@@ -234,20 +241,21 @@ class _HomePageState extends State<HomePage> {
           item['formatted']['audio'].length > 0) {
         // print('Received: ${item}');
         Uint8List audio = item['formatted']['audio'];
-        // Downsample the audio list by 3
+     //   Downsample the audio list by 3
         Uint8List downsampledAudio = [];
         for (int i = 0; i < audio.length ~/ 6; i += 6) {
           downsampledAudio.add(audio[i]);
           downsampledAudio.add(audio[i + 1]);
         }
-        // audio = Uint8List.fromList(downsampledAudio);
-        // print('Audio completed: ${audio.length} bytes');
+        audio = Uint8List.fromList(downsampledAudio);
+        print('Audio completed: ${audio.length} bytes');
         await _player.startPlayer(
-          fromDataBuffer: downsampledAudio,
+          fromDataBuffer: audio,
           codec: Codec.pcm16,
           numChannels: 1,
           sampleRate: 8000,
         );
+
         setState(() {
           items.add(item);
         });
