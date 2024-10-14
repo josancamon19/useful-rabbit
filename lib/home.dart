@@ -30,7 +30,7 @@ class _HomePageState extends State<HomePage> {
   List<dynamic> items = [];
   DeviceServiceStatus _status = DeviceServiceStatus.init;
 
-  BluetoothDevice bleDevice = BluetoothDevice.fromId('DF:D5:D9:DF:2D:58');
+  BluetoothDevice bleDevice = BluetoothDevice.fromId('EB:7D:C3:F4:52:2D');
 
   late StreamController<Uint8List> _controller;
 
@@ -90,7 +90,8 @@ BluetoothService? audioService;
           // debugPrint('discovered result');
           ScanResult r = results.last; //r is last device
           // debugPrint('${r.device.remoteId.str}: "${r.advertisementData.advName}" found!');
-
+  }
+  });
     //       if (r.device.remoteId.str == 'DF:D5:D9:DF:2D:58') {
     //         // bleDevice = r.device;
     //         // debugPrint('connecting to device');
@@ -110,7 +111,7 @@ BluetoothService? audioService;
     await FlutterBluePlus.startScan(
         // withServices:[Guid("180D")], // match any of the specified services
         // withNames:["Bluno"], // *or* any of the specified names
-        timeout: const Duration(seconds: 5));
+        timeout: Duration(seconds: 5));
 
     await bleDevice.connect();
 
@@ -127,7 +128,7 @@ BluetoothService? audioService;
 
     // final buttonService = await getServiceByUuid('DF:D5:D9:DF:2D:58', buttonDataStreamCharacteristicUuid);
     buttonService = services.firstWhere((service) => service.uuid.str128.toLowerCase() == buttonDataStreamCharacteristicUuid);
-    // audioService = services.firstWhere((service) => service.uuid.str128.toLowerCase() == friendServiceUuid);
+    audioService = services.firstWhere((service) => service.uuid.str128.toLowerCase() == friendServiceUuid);
     if (buttonService == null) {
         debugPrint('Button error');
         return null;
@@ -136,25 +137,46 @@ BluetoothService? audioService;
       debugPrint('Button service found');
     }
 
-      // if (audioService == null) {
-      //   debugPrint('Audio error');
-      //   return null;
-      // }
-      // else {
-      //   debugPrint('Audio service found');
-      // }
 
   var buttonCharacteristic = buttonService!.characteristics.firstWhere(
     (characteristic) => characteristic.uuid.str128.toLowerCase() == buttonTriggerCharacteristicUuid.toLowerCase(),
   );
 
+  await buttonCharacteristic.setNotifyValue(true);
+
    _buttonStream = buttonCharacteristic!.lastValueStream.listen((event) {
-    debugPrint('Button pressed');
+    if (event.isNotEmpty)
+    {
+    debugPrint(event[0].toString());
+
+      if (event[0] == 4)
+      {
+        debugPrint('Button pressed');
+      }
+    }
    });
 
 
 
+    if (audioService == null) {
+      debugPrint('Audio error');
+      return null;
+    }
+    else {
+      debugPrint('Audio service found');
+    }
 
+   var audioCharacteristic = audioService!.characteristics.firstWhere(
+    (characteristic) => characteristic.uuid.str128.toLowerCase() == audioDataStreamCharacteristicUuid.toLowerCase(),
+  );  
+  await audioCharacteristic.setNotifyValue(true);
+
+    _micStream = audioCharacteristic!.lastValueStream.listen((event) {
+    if (event.isNotEmpty)
+    {
+      
+    }
+   }); 
    //audio
     // var audioDataStreamCharacteristic = getCharacteristic(_friendService!, audioDataStreamCharacteristicUuid);
   }
