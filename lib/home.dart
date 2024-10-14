@@ -29,9 +29,8 @@ class _HomePageState extends State<HomePage> {
 
   List<Map<String, dynamic>> realtimeEvents = [];
   List<dynamic> items = [];
-  DeviceServiceStatus _status = DeviceServiceStatus.init;
 
-  BluetoothDevice bleDevice = BluetoothDevice.fromId('EB:7D:C3:F4:52:2D');
+  BluetoothDevice bleDevice = BluetoothDevice.fromId(dotenv.env['BT_DEVICE_ID']!);
 
   late StreamController<Food> _controller;
 

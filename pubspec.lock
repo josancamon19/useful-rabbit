@@ -267,10 +267,11 @@ packages:
   openai_realtime_dart:
     dependency: "direct main"
     description:
-      name: openai_realtime_dart
-      sha256: c77ff461ee24c28143d4ebddbfca113707c66cacf80c4d7759469a4734c3c1ee
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/openai_realtime_dart"
+      ref: main
+      resolved-ref: "4ede9ac6fb4ed08861aab4f74f53ec0bf6a15701"
+      url: "https://github.com/josancamon19/langchain_dart.git"
+    source: git
     version: "0.0.1+1"
   opus_dart:
     dependency: "direct main"
