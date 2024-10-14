@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 
+import 'package:app/tools.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -112,7 +113,6 @@ class _HomePageState extends State<HomePage> {
 
   _initClient() async {
     client = RealtimeClient(apiKey: dotenv.env['OPENAI_API_KEY']);
-    // addBasicMemoryToolToClient(client);
 
     client.updateSession(
       instructions: '''
@@ -131,39 +131,29 @@ class _HomePageState extends State<HomePage> {
       //   "silence_duration_ms": 200,
       // },
     );
-    client.addTool(
-      {
-        'name': 'get_weather',
-        'description': 'Retrieves the weather for a given lat, lng coordinate pair. Specify a label for the location.',
-        'parameters': {
-          'type': 'object',
-          'properties': {
-            'lat': {
-              'type': 'number',
-              'description': 'Latitude',
-            },
-            'lng': {
-              'type': 'number',
-              'description': 'Longitude',
-            },
-            'location': {
-              'type': 'string',
-              'description': 'Name of the location',
-            },
+    client.addTool({
+      'name': 'add_item_to_cart',
+      'description': 'Function to use for adding items to the amazon shopping cart.',
+      'parameters': {
+        'type': 'object',
+        'properties': {
+          'name': {
+            'type': 'string',
+            'description': 'Name of the item to add to the cart',
           },
-          'required': ['lat', 'lng', 'location'],
         },
+        'required': ['name'],
       },
-      (params) async {
-        print('get_weather params: $params');
-        return {'ok': '24 degrees celcius, sunny, no rain'};
-      },
-    );
+    }, (params) async {
+      if (params['name'] == null) return {'ok': false};
+      bool response = await addItemsOnAmazonToCart([params['name']]);
+      return {'ok': response};
+    });
     // Set up event handling for 'realtime.event'
     client.on('realtime.event', (realtimeEvent) {
       if (realtimeEvent == null) return;
       if (realtimeEvent['event'] == null) return;
-      // TODO: user events not received
+
       setState(() {
         final lastEvent = realtimeEvents.isNotEmpty ? realtimeEvents.last : null;
         if (lastEvent != null && lastEvent['event']['type'] == realtimeEvent['event']['type']) {
@@ -215,14 +205,14 @@ class _HomePageState extends State<HomePage> {
 
     // Optionally send an initial message
     client.sendUserMessageContent([
-      {'type': 'input_text', 'text': 'Hello!'}
+      {'type': 'input_text', 'text': 'Hey!'},
     ]);
   }
 
   @override
   void initState() {
     super.initState();
-    _initBleConnection();
+    // _initBleConnection();
     _initClient();
     // _initRecording();
     _initiatePlayer();

@@ -105,15 +105,15 @@ void addBasicMemoryToolToClient(client) {
 // },
 // );
 
-Future<String> addItemsOnAmazonToCart() async {
+Future<bool> addItemsOnAmazonToCart(List<String> items) async {
   String url = 'https://camel-lucky-reliably.ngrok-free.app/buy';
   final response = await http.post(Uri.parse(url),
       headers: {
         'Content-Type': 'application/json',
       },
-      body: jsonEncode(['Zero to One by Peter Thiel']));
+      body: jsonEncode(items));
   if (response.statusCode == 200) {
-    return jsonDecode(response.body)['message'];
+    return jsonDecode(response.body)['message'] == 'Success';
   }
-  return 'Failed to add items to cart';
+  return false;
 }
